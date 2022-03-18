@@ -137,6 +137,7 @@ if __name__ == "__main__":
             # Check if lock is not connected to the internet
             elif hasWifi is False:
                     printToLCD('Lock Is Offline ', 1)
+                    checkForConnection()
                     time.sleep(1)
                     printToLCD('Waiting For Card', 1)
             # Fetch member from the API
