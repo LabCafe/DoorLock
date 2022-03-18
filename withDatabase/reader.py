@@ -44,7 +44,7 @@ def printToLCD(text, line):
 
 # Function to fetch memberID based on their cardID
 def getMemberID(cardID):
-    printToLCD('Fetching memberID', 1)
+    printToLCD('Fetching userID ', 1)
     response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID + "&limit=50", headers=headers)
     if response.status_code == 200:
         if response.json() != []:
@@ -81,16 +81,19 @@ def checkForConnection():
     global hasWifi
     try:
         requests.get("https://google.com", timeout=5)
+        printToLCD("Online mode     ", 2)
         hasWifi = True
     except:
+        printToLCD("Offline mode    ", 2)
         hasWifi = False
+    
 
 
 if __name__ == "__main__":
     # Initiate sqlite database
     conn = sqlite3.connect('database.sqlite')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS members(id INTEGER PRIMARY KEY, memberID TEXT, cardID TEXT, allowed INTEGER, last_seen INTEGER, last_fetched INTEGER)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS members(id INTEGER PRIMARY KEY, memberID TEXT, cardID TEXT, allowed INTEGER, lastSeen INTEGER, lastFetched INTEGER)''')
     conn.commit()
 
     # Print initial text to LCD
@@ -100,6 +103,7 @@ if __name__ == "__main__":
     # Check if connected to the internet
     checkForConnection()
 
+    print("Door lock is ready. Waiting for card...")
     # Loop
     while True:
         # Button check
@@ -107,7 +111,7 @@ if __name__ == "__main__":
             openDoorLock()
 
         # Card check
-        card = reader.read()
+        card = reader.read(timeout=0.25)
 
         if card:
             cardID = "01" + format(card.value, 'x')
@@ -146,7 +150,7 @@ if __name__ == "__main__":
                     
                 elif checkMemberAccess(memberID):
                     print("Member " + str(memberID) + " is allowed to open doors.")
-                    c.execute("INSERT INTO members (memberID, cardID, allowed, last_seen, last_fetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
+                    c.execute("INSERT INTO members (memberID, cardID, allowed, lastSeen, lastFetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
                     conn.commit()
                     sendActivityLog(memberID)
                     openDoorLock()

@@ -6,9 +6,12 @@
 
 import RPi.GPIO as GPIO
 import rdm6300, time, requests, datetime, time, serial, sqlite3
+from dotenv import dotenv_values
+
+config = dotenv_values(".env")
 
 # Header for API requests
-headers = {"Authorization": "Bearer 4ffdc9f9-2609-4c8f-80e5-3b2c65f72e2a"}
+headers = {"Authorization": "Bearer " + config.get("API_KEY")}
 
 # Settings
 settings = {"trainingID": "1031", "resourceID": "2247", "doorTime": "5"}
@@ -70,7 +73,7 @@ if __name__ == "__main__":
     # Initiate sqlite database
     conn = sqlite3.connect('database.sqlite')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS members(id INTEGER PRIMARY KEY, memberID TEXT, cardID TEXT, allowed INTEGER, last_seen INTEGER, last_fetched INTEGER)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS members(id INTEGER PRIMARY KEY, memberID TEXT, cardID TEXT, allowed INTEGER, lastSeen INTEGER, lastFetched INTEGER)''')
     conn.commit()
 
     # Check for internet connection
@@ -80,7 +83,7 @@ if __name__ == "__main__":
     # Loop of life
     while True:
         # Card check
-        card = reader.read()
+        card = reader.read(timeout=0.25)
         if card:
             cardID = "01" + format(card.value, 'x')
 
@@ -112,7 +115,7 @@ if __name__ == "__main__":
 
                     elif checkMemberAccess(memberID):
                         print("Opening doors for member " + str(memberID) + " for " + settings["doorTime"] + " seconds")
-                        c.execute("INSERT INTO members (memberID, cardID, allowed, last_seen, last_fetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
+                        c.execute("INSERT INTO members (memberID, cardID, allowed, lastSeen, lastFetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
                         conn.commit()
                         sendActivityLog(memberID)
                         openDoorLock()
