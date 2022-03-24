@@ -71,6 +71,7 @@ def checkForConnection():
         hasWifi = True
     except:
         hasWifi = False
+        pixels.fill((255, 255, 0))
     return
 
 if __name__ == "__main__":
@@ -89,52 +90,57 @@ if __name__ == "__main__":
 
     # Loop of life
     while True:
-        # Reset Pixels
-        pixels.fill((0, 0, 255))
-        # Card check
-        card = reader.read(timeout=0.25)
-        if card:
-            cardID = "01" + format(card.value, 'x')
+        try:
+            # Reset Pixels
+            if hasWifi:
+                pixels.fill((0, 0, 255))
+            # Card check
+            card = reader.read(timeout=0.25)
+            if card:
+                cardID = "01" + format(card.value, 'x')
 
-            currentMilis = int(round(time.time() * 1000))
-            c.execute("UPDATE members SET lastSeen=? WHERE cardID=?", (currentMilis, cardID))
-            conn.commit()
-            print("Found card with ID: " + cardID)
+                currentMilis = int(round(time.time() * 1000))
+                c.execute("UPDATE members SET lastSeen=? WHERE cardID=?", (currentMilis, cardID))
+                conn.commit()
+                print("Found card with ID: " + cardID)
 
-            # Check if card exists in database
-            c.execute("SELECT * FROM members WHERE cardID = ?", (cardID,))
-            member = c.fetchone();
-            if member is not None:
-                if member[3] == 1:
-                    print("Member is allowed to open doors")
-                    if hasWifi:
-                        sendActivityLog(member[1])
-                    openDoorLock()
-                else:
-                    print("Member is not allowed to open doors")
-                
-            else:
-                if hasWifi != True:
-                    print("No internet connection, waiting for connection")
-                    pixels.fill((255, 255, 0))
-                    checkForConnection()
-                else:
-                    memberID = getMemberID(cardID)
-                    if memberID is None:
-                        print('Found invalid card')
-
-                    elif checkMemberAccess(memberID):
-                        print("Opening doors for member " + str(memberID) + " for " + settings["doorTime"] + " seconds")
-                        c.execute("INSERT INTO members (memberID, cardID, allowed, lastSeen, lastFetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
-                        conn.commit()
-                        sendActivityLog(memberID)
+                # Check if card exists in database
+                c.execute("SELECT * FROM members WHERE cardID = ?", (cardID,))
+                member = c.fetchone();
+                if member is not None:
+                    if member[3] == 1:
+                        print("Member is allowed to open doors")
+                        if hasWifi:
+                            sendActivityLog(member[1])
                         openDoorLock()
-                        print("Closing doors")
                     else:
-                        print('Member with ID ' + str(memberID) + ' has no access.')
-                        pixels.fill((255, 0, 0))
-                        time.sleep(1)
+                        print("Member is not allowed to open doors")
+                    
+                else:
+                    if hasWifi != True:
+                        print("No internet connection, waiting for connection")
+                        pixels.fill((255, 255, 0))
+                        checkForConnection()
+                    else:
+                        memberID = getMemberID(cardID)
+                        if memberID is None:
+                            print('Found invalid card')
 
+                        elif checkMemberAccess(memberID):
+                            print("Opening doors for member " + str(memberID) + " for " + settings["doorTime"] + " seconds")
+                            c.execute("INSERT INTO members (memberID, cardID, allowed, lastSeen, lastFetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
+                            conn.commit()
+                            sendActivityLog(memberID)
+                            openDoorLock()
+                            print("Closing doors")
+                        else:
+                            print('Member with ID ' + str(memberID) + ' has no access.')
+                            pixels.fill((255, 0, 0))
+                            time.sleep(1)
+        except:
+            checkForConnection()
+            ser.flushInput()
+            time.sleep(1) 
         # Required to prevent multiple reads
         ser.flushInput()
         time.sleep(1)
