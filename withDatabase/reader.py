@@ -106,61 +106,68 @@ if __name__ == "__main__":
     print("Door lock is ready. Waiting for card...")
     # Loop
     while True:
-        # Button check
-        if GPIO.input(6) == GPIO.HIGH:
-            openDoorLock()
+        try:
+            # Check for connection
+            if hasWifi == False:
+                checkForConnection()
+            # Button check
+            if GPIO.input(6) == GPIO.HIGH:
+                openDoorLock()
 
-        # Card check
-        card = reader.read(timeout=0.25)
+            # Card check
+            card = reader.read(timeout=0.25)
 
-        if card:
-            cardID = "01" + format(card.value, 'x')
-            print("Found card with ID: " + cardID)
-            currentMilis = int(round(time.time() * 1000))
-            c.execute("UPDATE members SET lastSeen=? WHERE cardID=?", (currentMilis, cardID))
-            conn.commit()
-            
-            # Check if card exists in database
-            c.execute("SELECT * FROM members WHERE cardID = ?", (cardID,))
-            member = c.fetchone();
-            if member is not None:
-                if member[3] == 1:
-                    print("Member is allowed to open doors")
-                    if hasWifi:
-                        sendActivityLog(member[1])
-                    openDoorLock()
+            if card:
+                cardID = "01" + format(card.value, 'x')
+                print("Found card with ID: " + cardID)
+                currentMilis = int(round(time.time() * 1000))
+                c.execute("UPDATE members SET lastSeen=? WHERE cardID=?", (currentMilis, cardID))
+                conn.commit()
+                
+                # Check if card exists in database
+                c.execute("SELECT * FROM members WHERE cardID = ?", (cardID,))
+                member = c.fetchone();
+                if member is not None:
+                    if member[3] == 1:
+                        print("Member is allowed to open doors")
+                        if hasWifi:
+                            sendActivityLog(member[1])
+                        openDoorLock()
+                    else:
+                        print("Member is not allowed to open doors")
+                        printToLCD('No permission   ', 1)
+                        time.sleep(2)
+
+                # Check if lock is not connected to the internet
+                elif hasWifi is False:
+                        printToLCD('Lock Is Offline ', 1)
+                        checkForConnection()
+                        time.sleep(1)
+                        printToLCD('Waiting For Card', 1)
+                # Fetch member from the API
                 else:
-                    print("Member is not allowed to open doors")
-                    printToLCD('No permission   ', 1)
-                    time.sleep(2)
+                    memberID = getMemberID(cardID)
+                    if memberID is None:
+                        print('Found invalid card')
+                        printToLCD('Invalid card    ', 1)
+                        time.sleep(1)
+                        printToLCD('Waiting For Card', 1)
+                        
+                    elif checkMemberAccess(memberID):
+                        print("Member " + str(memberID) + " is allowed to open doors.")
+                        c.execute("INSERT INTO members (memberID, cardID, allowed, lastSeen, lastFetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
+                        conn.commit()
+                        sendActivityLog(memberID)
+                        openDoorLock()
+                    else:
+                        print('Member with ID ' + str(memberID) + ' has no access.')
+                        printToLCD('No permission   ', 1)
+                        time.sleep(1)
+                        printToLCD('Waiting For Card', 1)
+        except:
+            checkForConnection()
 
-            # Check if lock is not connected to the internet
-            elif hasWifi is False:
-                    printToLCD('Lock Is Offline ', 1)
-                    checkForConnection()
-                    time.sleep(1)
-                    printToLCD('Waiting For Card', 1)
-            # Fetch member from the API
-            else:
-                memberID = getMemberID(cardID)
-                if memberID is None:
-                    print('Found invalid card')
-                    printToLCD('Invalid card    ', 1)
-                    time.sleep(1)
-                    printToLCD('Waiting For Card', 1)
-                    
-                elif checkMemberAccess(memberID):
-                    print("Member " + str(memberID) + " is allowed to open doors.")
-                    c.execute("INSERT INTO members (memberID, cardID, allowed, lastSeen, lastFetched) VALUES (?, ?, ?, ?, ?)",(memberID, cardID, 1, currentMilis, currentMilis))
-                    conn.commit()
-                    sendActivityLog(memberID)
-                    openDoorLock()
-                else:
-                    print('Member with ID ' + str(memberID) + ' has no access.')
-                    printToLCD('No permission   ', 1)
-                    time.sleep(1)
-                    printToLCD('Waiting For Card', 1)
-
+        # Required to prevent multiple reads
         ser.flushInput()
         time.sleep(0.2)
 

@@ -71,7 +71,6 @@ def checkForConnection():
         hasWifi = True
     except:
         hasWifi = False
-        pixels.fill((255, 255, 0))
     return
 
 if __name__ == "__main__":
@@ -94,6 +93,10 @@ if __name__ == "__main__":
             # Reset Pixels
             if hasWifi:
                 pixels.fill((0, 0, 255))
+            else:
+                pixels.fill((255, 255, 0))
+                checkForConnection()
+
             # Card check
             card = reader.read(timeout=0.25)
             if card:
@@ -139,8 +142,7 @@ if __name__ == "__main__":
                             time.sleep(1)
         except:
             checkForConnection()
-            ser.flushInput()
-            time.sleep(1) 
+            
         # Required to prevent multiple reads
         ser.flushInput()
         time.sleep(1)
