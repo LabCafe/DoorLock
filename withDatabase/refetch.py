@@ -8,7 +8,7 @@ headers = {"Authorization": "Bearer " + config.get("API_KEY")}
 
 
 def getMemberID(cardID):
-    response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID + "&limit=50", headers=headers)
+    response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID + "&limit=50", headers=headers, timeout=5)
     if response.status_code == 200:
         if response.json() != []:
             return response.json()[0]["id"]
@@ -16,7 +16,7 @@ def getMemberID(cardID):
 
 
 def checkUserAccess(memberID):
-    response = requests.get("https://fabman.io/api/v1/members/" + str(memberID) + "/trainings", headers=headers)
+    response = requests.get("https://fabman.io/api/v1/members/" + str(memberID) + "/trainings", headers=headers, timeout=5)
     for training in response.json():
         if training["trainingCourse"] == 1031 :
             return True

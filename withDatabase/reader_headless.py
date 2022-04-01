@@ -30,7 +30,7 @@ hasWifi = False
 
 # Function to fetch memberID based on their card ID
 def getMemberID(cardID):
-    response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID + "&limit=50", headers=headers)
+    response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID + "&limit=50", headers=headers, timeout=5)
     if response.status_code == 200:
         if response.json() != []:
             return response.json()[0]["id"]
@@ -38,7 +38,7 @@ def getMemberID(cardID):
 
 # Check if member has access
 def checkMemberAccess(memberID):
-    response = requests.get("https://fabman.io/api/v1/members/" + str(memberID) + "/trainings", headers=headers)
+    response = requests.get("https://fabman.io/api/v1/members/" + str(memberID) + "/trainings", headers=headers, timeout=5)
     for training in response.json():
         if training["trainingCourse"] == int(settings['trainingID']) :
             return True
@@ -57,13 +57,13 @@ def sendActivityLog(memberID):
     json = {"resource": settings['resourceID'], "member": str(memberID), "createdAt": str(
         currentTime), "stoppedAt": str(currentTime), "idleDurationSeconds": 0, "notes": "Hlavné Dvere", "metadata": {}}
     requests.post("https://fabman.io/api/v1/resource-logs",
-                  headers=headers, json=json)
+                  headers=headers, json=json, timeout=5)
 
 # Check if wifi is available
 def checkForConnection():
     global hasWifi
     try:
-        requests.get("https://google.com")
+        requests.get("https://google.com", timeout=5)
         hasWifi = True
     except:
         hasWifi = False
