@@ -8,7 +8,7 @@ headers = {"Authorization": "Bearer " + config.get("API_KEY")}
 
 
 def getMemberID(cardID):
-    response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID + "&limit=50", headers=headers, timeout=5)
+    response = requests.get("https://fabman.io/api/v1/members?keyType=em4102&keyToken=" + cardID, headers=headers, timeout=5)
     if response.status_code == 200:
         if response.json() != []:
             return response.json()[0]["id"]
@@ -32,6 +32,6 @@ if __name__ == '__main__':
     members = c.execute("SELECT * FROM members").fetchall()
     for member in members:
         currentMilis = int(round(time.time() * 1000))
-        c.execute("UPDATE members SET allowed = ?, last_fetched = ? WHERE id = ?", (checkUserAccess(getMemberID(member[1])), currentMilis, member[0]))
+        c.execute("UPDATE members SET allowed = ?, lastFetched = ? WHERE id = ?", (checkUserAccess(member[1]), currentMilis, member[0]))
         conn.commit()
     conn.close()
